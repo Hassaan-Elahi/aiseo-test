@@ -14,7 +14,9 @@ import {
 } from './hooks'
 import './App.css'
 
-const VENUE_DATA_SOURCE = '/venue.stadium.json'
+// const VENUE_DATA_SOURCE = '/venue.stadium.json'
+const VENUE_DATA_SOURCE = '/venue.test.json'
+
 
 function App() {
   // Feature toggles
@@ -68,6 +70,12 @@ function App() {
     })
   }
 
+  const handleResetAll = () => {
+    panZoom.resetView()
+    seatSelection.setSelectedSeatIds([])
+    adjacentHelper.setHelperMessage(null)
+  }
+
   // Loading state
   if (loading) {
     return <main className="shell">Loading venue...</main>
@@ -91,7 +99,7 @@ function App() {
         onFindAdjacent={handleFindAdjacentSeats}
         zoomIn={panZoom.zoomIn}
         zoomOut={panZoom.zoomOut}
-        onResetView={panZoom.resetView}
+        onResetView={handleResetAll}
       />
 
       <section className="layout">

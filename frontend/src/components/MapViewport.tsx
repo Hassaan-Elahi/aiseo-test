@@ -40,7 +40,7 @@ export function MapViewport({
 }: MapViewportProps) {
   return (
     <section className="map-card" aria-label="Seating map area">
-      <p className="map-hint">Scroll to zoom, drag empty space to pan, and use arrow keys plus Enter/Space on focused seats.</p>
+      <p className="map-hint">Scroll or pinch to zoom, drag empty space to pan, and use arrow keys plus Enter/Space on focused seats.</p>
       <div
         className="map-viewport"
         style={{ aspectRatio: `${venue.map.width} / ${venue.map.height}` }}
