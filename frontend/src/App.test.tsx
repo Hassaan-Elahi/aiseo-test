@@ -20,6 +20,7 @@ const venueFixture: VenueData = {
           seats: [
             { id: 'A-1-01', col: 1, x: 40, y: 40, priceTier: 1, status: 'available' },
             { id: 'A-1-02', col: 2, x: 80, y: 40, priceTier: 1, status: 'available' },
+            { id: 'A-1-03', col: 3, x: 120, y: 40, priceTier: 2, status: 'reserved' },
           ],
         },
       ],
@@ -57,6 +58,27 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText(/1 \/ 8 seats selected/i)).toBeInTheDocument()
       expect(screen.getByText(/Subtotal: \$75/i)).toBeInTheDocument()
+    })
+  })
+
+  it('allows inspecting an unavailable seat without adding it to selection', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByRole('heading', { name: /Metropolis Arena/i })
+
+    const reservedSeat = screen.getByRole('button', {
+      name: /A-1-03 \(Lower Bowl A Row 1 Seat 3\), reserved/i,
+    })
+
+    await user.click(reservedSeat)
+
+    await waitFor(() => {
+      expect(screen.getByText(/^Seat$/i)).toBeInTheDocument()
+      expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByText(/reserved/i)).toBeInTheDocument()
+      expect(screen.getByText(/0 \/ 8 seats selected/i)).toBeInTheDocument()
+      expect(screen.getByText(/Subtotal: \$0/i)).toBeInTheDocument()
     })
   })
 })

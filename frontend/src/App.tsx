@@ -9,8 +9,9 @@ import './App.css'
 
 const STORAGE_KEY = 'ds-assessment:selected-seats'
 const MAX_SELECTION = 8
-const MIN_ZOOM = 0.6
-const MAX_ZOOM = 4
+const DEFAULT_ZOOM = 1
+const MIN_ZOOM = 1
+const MAX_ZOOM = 8
 
 function getFirstSelectableSeatId(venue: VenueData): string | null {
   for (const section of venue.sections) {
@@ -32,20 +33,28 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([])
   const [focusedSeatId, setFocusedSeatId] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
 
   const seatRefs = useRef<Map<string, SVGCircleElement>>(new Map())
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
   const hasHydratedSelection = useRef(false)
+  const panRafId = useRef<number | null>(null)
+  const pendingPan = useRef<{ x: number; y: number } | null>(null)
+  const zoomRafId = useRef<number | null>(null)
+  const pendingZoomDelta = useRef(0)
 
   useEffect(() => {
     let canceled = false
 
     async function loadVenue(): Promise<void> {
       try {
-        const response = await fetch('/venue.json')
+        // const response = await fetch('/venue.json')
+        // const response = await fetch('/venue.test.json')
+        // const response = await fetch('/venue.stress.json')
+        const response = await fetch('/venue.stadium.json')
+
         if (!response.ok) {
           throw new Error(`Unable to load venue.json (${response.status})`)
         }
@@ -117,7 +126,35 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedSeatIds))
   }, [selectedSeatIds])
 
+  useEffect(() => {
+    return () => {
+      if (panRafId.current !== null) {
+        cancelAnimationFrame(panRafId.current)
+      }
+
+      if (zoomRafId.current !== null) {
+        cancelAnimationFrame(zoomRafId.current)
+      }
+    }
+  }, [])
+
   const selectedSeatSet = useMemo(() => new Set(selectedSeatIds), [selectedSeatIds])
+
+  const visibleSeats = useMemo(() => {
+    if (!seatIndex || !venue) {
+      return []
+    }
+
+    // Culling must use SVG viewBox units, not DOM pixels.
+    // The visible world at zoom=1 is exactly the venue map dimensions.
+    const buffer = 80 / zoom
+    const left = -pan.x / zoom - buffer
+    const top = -pan.y / zoom - buffer
+    const right = (venue.map.width - pan.x) / zoom + buffer
+    const bottom = (venue.map.height - pan.y) / zoom + buffer
+
+    return seatIndex.allSeats.filter((seat) => seat.x >= left && seat.x <= right && seat.y >= top && seat.y <= bottom)
+  }, [pan.x, pan.y, seatIndex, venue, zoom])
 
   const selectedSeats = useMemo(() => {
     if (!seatIndex) {
@@ -144,7 +181,14 @@ function App() {
       }
 
       const seat = seatIndex.seatById.get(seatId)
-      if (!seat || !isSeatSelectable(seat.status)) {
+      if (!seat) {
+        return
+      }
+
+      // Always allow focusing a seat to inspect details, even if it is unavailable.
+      setFocusedSeatId(seatId)
+
+      if (!isSeatSelectable(seat.status)) {
         return
       }
 
@@ -159,7 +203,6 @@ function App() {
 
         return [...current, seatId]
       })
-      setFocusedSeatId(seatId)
     },
     [seatIndex],
   )
@@ -223,14 +266,41 @@ function App() {
   }, [])
 
   const resetView = useCallback(() => {
-    setZoom(1)
+    setZoom(DEFAULT_ZOOM)
     setPan({ x: 0, y: 0 })
   }, [])
+
+  const onSeatMapClick = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
+    const target = event.target as Element
+    const seatNode = target.closest('.seat')
+    if (!seatNode) {
+      return
+    }
+
+    const seatId = seatNode.getAttribute('data-seat-id')
+    if (!seatId) {
+      return
+    }
+
+    toggleSeat(seatId)
+  }, [toggleSeat])
 
   const onWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault()
     const delta = event.deltaY > 0 ? -0.12 : 0.12
-    setZoom((current) => clamp(Number((current + delta).toFixed(2)), MIN_ZOOM, MAX_ZOOM))
+    pendingZoomDelta.current += delta
+
+    if (zoomRafId.current !== null) {
+      return
+    }
+
+    zoomRafId.current = requestAnimationFrame(() => {
+      zoomRafId.current = null
+      const bufferedDelta = pendingZoomDelta.current
+      pendingZoomDelta.current = 0
+
+      setZoom((current) => clamp(Number((current + bufferedDelta).toFixed(2)), MIN_ZOOM, MAX_ZOOM))
+    })
   }, [])
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -254,14 +324,35 @@ function App() {
       return
     }
 
-    setPan({
+    pendingPan.current = {
       x: panStart.current.panX + (event.clientX - panStart.current.x),
       y: panStart.current.panY + (event.clientY - panStart.current.y),
+    }
+
+    if (panRafId.current !== null) {
+      return
+    }
+
+    panRafId.current = requestAnimationFrame(() => {
+      panRafId.current = null
+      if (pendingPan.current) {
+        setPan(pendingPan.current)
+      }
     })
   }, [isPanning])
 
   const onPointerEnd = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     setIsPanning(false)
+
+    if (panRafId.current !== null) {
+      cancelAnimationFrame(panRafId.current)
+      panRafId.current = null
+    }
+
+    if (pendingPan.current) {
+      setPan(pendingPan.current)
+      pendingPan.current = null
+    }
 
     const target = event.currentTarget as HTMLDivElement & {
       hasPointerCapture?: (pointerId: number) => boolean
@@ -318,6 +409,7 @@ function App() {
               viewBox={`0 0 ${venue.map.width} ${venue.map.height}`}
               role="img"
               aria-label={`${venue.name} seating map`}
+              onClick={onSeatMapClick}
             >
               <defs>
                 <pattern id="seat-unavailable-zigzag" width="8" height="8" patternUnits="userSpaceOnUse">
@@ -325,12 +417,13 @@ function App() {
                 </pattern>
               </defs>
               <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-                {seatIndex.allSeats.map((seat) => (
+                {visibleSeats.map((seat) => (
                   <SeatCircle
                     key={seat.id}
                     seat={seat}
                     isSelected={selectedSeatSet.has(seat.id)}
                     isFocused={focusedSeatId === seat.id}
+                    zoom={zoom}
                     onActivate={toggleSeat}
                     onFocusSeat={focusSeat}
                     onMove={moveFocus}

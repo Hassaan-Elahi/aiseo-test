@@ -8,6 +8,7 @@ interface SeatCircleProps {
   seat: RenderSeat
   isSelected: boolean
   isFocused: boolean
+  zoom: number
   onActivate: (seatId: string) => void
   onFocusSeat: (seatId: string) => void
   onMove: (seatId: string, direction: 'left' | 'right' | 'up' | 'down') => void
@@ -18,6 +19,7 @@ function SeatCircleComponent({
   seat,
   isSelected,
   isFocused,
+  zoom,
   onActivate,
   onFocusSeat,
   onMove,
@@ -25,6 +27,7 @@ function SeatCircleComponent({
 }: SeatCircleProps) {
   const disabled = seat.status !== 'available'
   const showFocusRing = isFocused && !disabled
+  const showPatternOverlay = disabled && zoom >= 1.15
   const price = formatCurrency(getSeatPrice(seat.priceTier))
   const seatName = `${seat.sectionId}-${seat.rowIndex}-${String(seat.col).padStart(2, '0')}`
   const label = `${seatName} (${seat.sectionLabel} Row ${seat.rowIndex} Seat ${seat.col}), ${seat.status}, ${price}`
@@ -61,10 +64,11 @@ function SeatCircleComponent({
   }
 
   return (
-    <g key={seat.id}>
+    <g>
       <circle
         ref={(node) => registerRef(seat.id, node)}
         className={`seat seat--${seat.status}${disabled ? ' seat--unavailable' : ''}${isSelected ? ' seat--selected' : ''}${showFocusRing ? ' seat--focused' : ''}`}
+        data-seat-id={seat.id}
         cx={seat.x}
         cy={seat.y}
         r={10}
@@ -78,10 +82,9 @@ function SeatCircleComponent({
             onFocusSeat(seat.id)
           }
         }}
-        onClick={() => onActivate(seat.id)}
         onKeyDown={onKeyDown}
       />
-      {disabled ? (
+      {showPatternOverlay ? (
         <circle
           className="seat-pattern-overlay"
           cx={seat.x}
@@ -92,17 +95,6 @@ function SeatCircleComponent({
           fill="url(#seat-unavailable-zigzag)"
         />
       ) : null}
-      <text
-        x={seat.x}
-        y={seat.y + 22}
-        textAnchor="middle"
-        fontSize={11}
-        fill="#1f2937"
-        pointerEvents="none"
-        className="seat-label"
-      >
-        {seatName}
-      </text>
     </g>
   )
 }

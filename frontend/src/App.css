@@ -118,14 +118,13 @@
   cursor: pointer;
   stroke: #fefaf0;
   stroke-width: 1.6;
-  transition: stroke 120ms ease, stroke-width 120ms ease, filter 120ms ease;
+  transition: stroke 90ms ease, stroke-width 90ms ease;
   transform-origin: center;
 }
 
 .seat--available:hover {
   stroke: #fbbf24;
   stroke-width: 3;
-  filter: brightness(1.15) drop-shadow(0 0 5px rgba(251, 191, 36, 0.6));
 }
 
 .seat--available:focus-visible,
@@ -137,7 +136,6 @@
 .seat--selected {
   stroke: #22d3ee;
   stroke-width: 4.5;
-  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.8));
 }
 
 .seat--available {
@@ -162,13 +160,6 @@
 
 .seat-pattern-overlay {
   opacity: 0.92;
-}
-
-.seat-label {
-  font-size: 10px;
-  font-weight: 600;
-  user-select: none;
-  letter-spacing: 0.02em;
 }
 
 .sidebar {
