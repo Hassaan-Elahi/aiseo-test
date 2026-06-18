@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SeatCircle } from './components/SeatCircle'
 import { SeatDetails } from './components/SeatDetails'
 import { SelectionSummary } from './components/SelectionSummary'
-import { clamp, buildSeatIndex, getDirectionalNeighbor, isSeatSelectable, readVenueData } from './lib/venue'
+import { clamp, buildSeatIndex, findNearestSelectableSeatIds, getDirectionalNeighbor, isSeatSelectable, readVenueData } from './lib/venue'
 import type { Direction, VenueData } from './types'
 import './App.css'
 
 const STORAGE_KEY = 'ds-assessment:selected-seats'
+const HEATMAP_STORAGE_KEY = 'ds-assessment:show-heatmap'
+const THEME_STORAGE_KEY = 'ds-assessment:theme'
 const MAX_SELECTION = 8
 const DEFAULT_ZOOM = 1
 const MIN_ZOOM = 1
@@ -28,11 +30,27 @@ function getFirstSelectableSeatId(venue: VenueData): string | null {
 }
 
 function App() {
+  const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem(HEATMAP_STORAGE_KEY) === '1')
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const persistedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+    if (persistedTheme === 'dark') {
+      return true
+    }
+
+    if (persistedTheme === 'light') {
+      return false
+    }
+
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+  })
+
   const [venue, setVenue] = useState<VenueData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([])
   const [focusedSeatId, setFocusedSeatId] = useState<string | null>(null)
+  const [adjacentCount, setAdjacentCount] = useState(3)
+  const [helperMessage, setHelperMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
@@ -127,6 +145,15 @@ function App() {
   }, [selectedSeatIds])
 
   useEffect(() => {
+    localStorage.setItem(HEATMAP_STORAGE_KEY, showHeatmap ? '1' : '0')
+  }, [showHeatmap])
+
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light')
+  }, [isDarkMode])
+
+  useEffect(() => {
     return () => {
       if (panRafId.current !== null) {
         cancelAnimationFrame(panRafId.current)
@@ -206,6 +233,40 @@ function App() {
     },
     [seatIndex],
   )
+
+  const findAdjacentSeats = useCallback(() => {
+    if (!seatIndex || !focusedSeatId) {
+      setHelperMessage('Focus a seat first to find nearby seats.')
+      return
+    }
+
+    let nextMessage = ''
+
+    setSelectedSeatIds((current) => {
+      const selectedSet = new Set(current)
+      const remainingCapacity = MAX_SELECTION - current.length
+
+      if (remainingCapacity <= 0) {
+        nextMessage = `Maximum of ${MAX_SELECTION} seats already selected.`
+        return current
+      }
+
+      const targetCount = Math.max(1, Math.min(adjacentCount, remainingCapacity))
+      const nearestSeatIds = findNearestSelectableSeatIds(focusedSeatId, targetCount, seatIndex, selectedSet)
+
+      if (nearestSeatIds.length === 0) {
+        nextMessage = 'No nearby available seats found.'
+        return current
+      }
+
+      nextMessage = `Added ${nearestSeatIds.length} nearby seat${nearestSeatIds.length === 1 ? '' : 's'}.`
+      return [...current, ...nearestSeatIds]
+    })
+
+    if (nextMessage) {
+      setHelperMessage(nextMessage)
+    }
+  }, [adjacentCount, focusedSeatId, seatIndex])
 
   const focusSeat = useCallback((seatId: string) => {
     setFocusedSeatId(seatId)
@@ -379,16 +440,56 @@ function App() {
           <p className="eyebrow">Interactive Seating Map</p>
           <h1>{venue.name}</h1>
         </div>
-        <div className="zoom-controls">
-          <button type="button" onClick={zoomOut} aria-label="Zoom out map">
-            -
-          </button>
-          <button type="button" onClick={zoomIn} aria-label="Zoom in map">
-            +
-          </button>
-          <button type="button" onClick={resetView} aria-label="Reset map position and zoom">
-            Reset
-          </button>
+        <div className="topbar-actions">
+          <div className="zoom-controls">
+            <button type="button" onClick={zoomOut} aria-label="Zoom out map">
+              -
+            </button>
+            <button type="button" onClick={zoomIn} aria-label="Zoom in map">
+              +
+            </button>
+            <button type="button" onClick={resetView} aria-label="Reset map position and zoom">
+              Reset
+            </button>
+          </div>
+          <div className="feature-controls">
+            <button
+              type="button"
+              onClick={() => setShowHeatmap((current) => !current)}
+              aria-pressed={showHeatmap}
+              aria-label="Toggle seat price heat map"
+            >
+              Heat Map: {showHeatmap ? 'On' : 'Off'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDarkMode((current) => !current)}
+              aria-pressed={isDarkMode}
+              aria-label="Toggle dark mode"
+            >
+              {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+            </button>
+            <label className="adjacent-label">
+              Nearby
+              <input
+                type="number"
+                min={1}
+                max={MAX_SELECTION}
+                value={adjacentCount}
+                onChange={(event) => {
+                  const value = Number.parseInt(event.target.value, 10)
+                  if (!Number.isFinite(value)) {
+                    return
+                  }
+
+                  setAdjacentCount(clamp(value, 1, MAX_SELECTION))
+                }}
+              />
+            </label>
+            <button type="button" onClick={findAdjacentSeats} aria-label="Find nearest adjacent seats">
+              Find N Adjacent
+            </button>
+          </div>
         </div>
       </header>
 
@@ -424,6 +525,7 @@ function App() {
                     isSelected={selectedSeatSet.has(seat.id)}
                     isFocused={focusedSeatId === seat.id}
                     zoom={zoom}
+                    showHeatmap={showHeatmap}
                     onActivate={toggleSeat}
                     onFocusSeat={focusSeat}
                     onMove={moveFocus}
@@ -436,10 +538,24 @@ function App() {
         </section>
 
         <aside className="sidebar">
+          {showHeatmap ? (
+            <section className="panel">
+              <h2>Price Heat Map</h2>
+              <ul className="heatmap-legend">
+                <li><span className="legend-dot legend-dot--tier-1" /> Tier 1</li>
+                <li><span className="legend-dot legend-dot--tier-2" /> Tier 2</li>
+                <li><span className="legend-dot legend-dot--tier-3" /> Tier 3</li>
+                <li><span className="legend-dot legend-dot--tier-4" /> Tier 4</li>
+              </ul>
+            </section>
+          ) : null}
           <SeatDetails seat={focusedSeat} />
           <SelectionSummary selectedSeats={selectedSeats} maxSelection={MAX_SELECTION} />
           {selectedSeatIds.length >= MAX_SELECTION ? (
             <p className="limit-note" role="status">Maximum of {MAX_SELECTION} seats reached.</p>
+          ) : null}
+          {helperMessage ? (
+            <p className="helper-note" role="status">{helperMessage}</p>
           ) : null}
         </aside>
       </section>

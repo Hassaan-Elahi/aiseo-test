@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSeatIndex, getDirectionalNeighbor, readVenueData } from './venue'
+import { buildSeatIndex, findNearestSelectableSeatIds, getDirectionalNeighbor, readVenueData } from './venue'
 import type { VenueData } from '../types'
 
 const venueFixture: VenueData = {
@@ -74,5 +74,13 @@ describe('venue helpers', () => {
     expect(getDirectionalNeighbor(source, 'left', index)).toBe('B-1-02')
     expect(getDirectionalNeighbor(rightEdgeSeat, 'right', index)).toBe('B-1-01')
     expect(getDirectionalNeighbor(leftEdgeSeat, 'left', index)).toBe('A-1-02')
+  })
+
+  it('finds nearest selectable seats by distance and skips sold/unavailable seats', () => {
+    const index = buildSeatIndex(venueFixture)
+
+    const nearest = findNearestSelectableSeatIds('A-1-01', 3, index, new Set(['A-1-02']))
+
+    expect(nearest).toEqual(['A-2-01', 'B-1-01', 'B-1-02'])
   })
 })

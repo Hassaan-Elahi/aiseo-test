@@ -210,3 +210,48 @@ export function getDirectionalNeighbor(
 
   return index.bySectionRowCol.get(keyForCell(sourceSeat.sectionId, nextRow, col)) ?? null
 }
+
+export function findNearestSelectableSeatIds(
+  sourceSeatId: string,
+  count: number,
+  index: SeatIndex,
+  excludedSeatIds: ReadonlySet<string> = new Set<string>(),
+): string[] {
+  if (count <= 0) {
+    return []
+  }
+
+  const sourceSeat = index.seatById.get(sourceSeatId)
+  if (!sourceSeat) {
+    return []
+  }
+
+  return index.allSeats
+    .filter((seat) => seat.id !== sourceSeat.id && isSeatSelectable(seat.status) && !excludedSeatIds.has(seat.id))
+    .map((seat) => {
+      const dx = seat.x - sourceSeat.x
+      const dy = seat.y - sourceSeat.y
+
+      return {
+        seat,
+        distanceSquared: dx * dx + dy * dy,
+      }
+    })
+    .sort((left, right) => {
+      if (left.distanceSquared !== right.distanceSquared) {
+        return left.distanceSquared - right.distanceSquared
+      }
+
+      if (left.seat.rowIndex !== right.seat.rowIndex) {
+        return left.seat.rowIndex - right.seat.rowIndex
+      }
+
+      if (left.seat.col !== right.seat.col) {
+        return left.seat.col - right.seat.col
+      }
+
+      return left.seat.id.localeCompare(right.seat.id)
+    })
+    .slice(0, count)
+    .map((entry) => entry.seat.id)
+}

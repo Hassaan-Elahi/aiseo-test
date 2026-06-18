@@ -9,6 +9,7 @@ interface SeatCircleProps {
   isSelected: boolean
   isFocused: boolean
   zoom: number
+  showHeatmap: boolean
   onActivate: (seatId: string) => void
   onFocusSeat: (seatId: string) => void
   onMove: (seatId: string, direction: 'left' | 'right' | 'up' | 'down') => void
@@ -20,6 +21,7 @@ function SeatCircleComponent({
   isSelected,
   isFocused,
   zoom,
+  showHeatmap,
   onActivate,
   onFocusSeat,
   onMove,
@@ -28,6 +30,7 @@ function SeatCircleComponent({
   const disabled = seat.status !== 'available'
   const showFocusRing = isFocused && !disabled
   const showPatternOverlay = disabled && zoom >= 1.15
+  const heatmapClass = showHeatmap && !disabled ? ` seat--tier-${seat.priceTier}` : ''
   const price = formatCurrency(getSeatPrice(seat.priceTier))
   const seatName = `${seat.sectionId}-${seat.rowIndex}-${String(seat.col).padStart(2, '0')}`
   const label = `${seatName} (${seat.sectionLabel} Row ${seat.rowIndex} Seat ${seat.col}), ${seat.status}, ${price}`
@@ -67,7 +70,7 @@ function SeatCircleComponent({
     <g>
       <circle
         ref={(node) => registerRef(seat.id, node)}
-        className={`seat seat--${seat.status}${disabled ? ' seat--unavailable' : ''}${isSelected ? ' seat--selected' : ''}${showFocusRing ? ' seat--focused' : ''}`}
+        className={`seat seat--${seat.status}${disabled ? ' seat--unavailable' : ''}${isSelected ? ' seat--selected' : ''}${showFocusRing ? ' seat--focused' : ''}${heatmapClass}`}
         data-seat-id={seat.id}
         cx={seat.x}
         cy={seat.y}
