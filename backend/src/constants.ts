@@ -1,0 +1,7 @@
+export const CACHE_TTL_MS = 60_000;
+export const CACHE_CLEANUP_INTERVAL_MS = 10_000;
+export const DB_SIMULATED_DELAY_MS = 200;
+export const RATE_LIMIT_BURST_WINDOW_MS = 10_000;
+export const RATE_LIMIT_BURST_CAPACITY = 5;
+export const RATE_LIMIT_MINUTE_WINDOW_MS = 60_000;
+export const RATE_LIMIT_MINUTE_CAPACITY = 10;
