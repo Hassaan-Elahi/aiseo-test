@@ -147,3 +147,5 @@ Modern browsers with ES2022+ support (Chrome 104+, Firefox 104+, Safari 16+, Edg
 - **Undo/redo** for selection history
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed design decisions and trade-offs.
+
+
