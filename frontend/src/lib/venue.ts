@@ -4,6 +4,7 @@ const STATUS_VALUES = new Set(['available', 'reserved', 'sold', 'held'])
 
 export interface SeatIndex {
   allSeats: RenderSeat[]
+  sectionOrder: string[]
   seatById: Map<string, RenderSeat>
   bySectionRowCol: Map<string, string>
   rowColsBySectionRow: Map<string, number[]>
@@ -71,12 +72,14 @@ export function readVenueData(payload: unknown): VenueData {
 
 export function buildSeatIndex(venue: VenueData): SeatIndex {
   const allSeats: RenderSeat[] = []
+  const sectionOrder: string[] = []
   const seatById = new Map<string, RenderSeat>()
   const bySectionRowCol = new Map<string, string>()
   const rowColsBySectionRow = new Map<string, number[]>()
   const rowIndexesBySection = new Map<string, number[]>()
 
   for (const section of venue.sections) {
+    sectionOrder.push(section.id)
     const rowSet = new Set<number>()
 
     for (const row of section.rows) {
@@ -112,6 +115,7 @@ export function buildSeatIndex(venue: VenueData): SeatIndex {
 
   return {
     allSeats,
+    sectionOrder,
     seatById,
     bySectionRowCol,
     rowColsBySectionRow,
@@ -147,7 +151,35 @@ export function getDirectionalNeighbor(
 ): string | null {
   if (direction === 'left' || direction === 'right') {
     const nextCol = sourceSeat.col + (direction === 'left' ? -1 : 1)
-    return index.bySectionRowCol.get(keyForCell(sourceSeat.sectionId, sourceSeat.rowIndex, nextCol)) ?? null
+    const sameSectionNeighbor = index.bySectionRowCol.get(keyForCell(sourceSeat.sectionId, sourceSeat.rowIndex, nextCol))
+    if (sameSectionNeighbor) {
+      return sameSectionNeighbor
+    }
+
+    const sectionPosition = index.sectionOrder.indexOf(sourceSeat.sectionId)
+    if (sectionPosition === -1) {
+      return null
+    }
+
+    const sectionCount = index.sectionOrder.length
+    const step = direction === 'left' ? -1 : 1
+
+    for (let offset = 1; offset < sectionCount; offset += 1) {
+      const wrappedPosition = (sectionPosition + step * offset + sectionCount) % sectionCount
+      const sectionId = index.sectionOrder[wrappedPosition]
+      const candidateCols = index.rowColsBySectionRow.get(keyForRow(sectionId, sourceSeat.rowIndex))
+      if (!candidateCols || candidateCols.length === 0) {
+        continue
+      }
+
+      const targetCol = direction === 'left' ? candidateCols[candidateCols.length - 1] : candidateCols[0]
+      const crossSectionNeighbor = index.bySectionRowCol.get(keyForCell(sectionId, sourceSeat.rowIndex, targetCol))
+      if (crossSectionNeighbor) {
+        return crossSectionNeighbor
+      }
+    }
+
+    return null
   }
 
   const rows = index.rowIndexesBySection.get(sourceSeat.sectionId)

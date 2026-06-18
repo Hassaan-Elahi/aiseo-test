@@ -49,7 +49,7 @@ describe('App', () => {
     await screen.findByRole('heading', { name: /Metropolis Arena/i })
 
     const seat = screen.getByRole('button', {
-      name: /Lower Bowl A Row 1 Seat 1, available/i,
+      name: /A-1-01 \(Lower Bowl A Row 1 Seat 1\), available/i,
     })
 
     await user.click(seat)

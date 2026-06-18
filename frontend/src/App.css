@@ -118,24 +118,26 @@
   cursor: pointer;
   stroke: #fefaf0;
   stroke-width: 1.6;
-  transition: transform 120ms ease, filter 120ms ease;
+  transition: stroke 120ms ease, stroke-width 120ms ease, filter 120ms ease;
   transform-origin: center;
 }
 
-.seat:hover {
-  transform: scale(1.12);
-  filter: brightness(1.06);
+.seat--available:hover {
+  stroke: #fbbf24;
+  stroke-width: 3;
+  filter: brightness(1.15) drop-shadow(0 0 5px rgba(251, 191, 36, 0.6));
 }
 
-.seat:focus-visible,
+.seat--available:focus-visible,
 .seat--focused {
   stroke: var(--focus);
-  stroke-width: 2.6;
+  stroke-width: 3.2;
 }
 
 .seat--selected {
-  stroke: #ecfdf5;
-  stroke-width: 2.8;
+  stroke: #22d3ee;
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.8));
 }
 
 .seat--available {
@@ -152,6 +154,21 @@
 
 .seat--held {
   fill: #1d4ed8;
+}
+
+.seat--unavailable {
+  cursor: not-allowed;
+}
+
+.seat-pattern-overlay {
+  opacity: 0.92;
+}
+
+.seat-label {
+  font-size: 10px;
+  font-weight: 600;
+  user-select: none;
+  letter-spacing: 0.02em;
 }
 
 .sidebar {

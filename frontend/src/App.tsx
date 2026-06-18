@@ -12,6 +12,20 @@ const MAX_SELECTION = 8
 const MIN_ZOOM = 0.6
 const MAX_ZOOM = 4
 
+function getFirstSelectableSeatId(venue: VenueData): string | null {
+  for (const section of venue.sections) {
+    for (const row of section.rows) {
+      for (const seat of row.seats) {
+        if (isSeatSelectable(seat.status)) {
+          return seat.id
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 function App() {
   const [venue, setVenue] = useState<VenueData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +55,7 @@ function App() {
 
         if (!canceled) {
           setVenue(parsed)
-          setFocusedSeatId(parsed.sections[0]?.rows[0]?.seats[0]?.id ?? null)
+          setFocusedSeatId(getFirstSelectableSeatId(parsed))
           setError(null)
         }
       } catch (loadError) {
@@ -165,14 +179,28 @@ function App() {
         return
       }
 
-      const neighborId = getDirectionalNeighbor(sourceSeat, direction, seatIndex)
-      if (!neighborId) {
-        return
-      }
+      let currentSeat = sourceSeat
 
-      const targetNode = seatRefs.current.get(neighborId)
-      targetNode?.focus()
-      setFocusedSeatId(neighborId)
+      for (let attempts = 0; attempts < seatIndex.allSeats.length; attempts += 1) {
+        const neighborId = getDirectionalNeighbor(currentSeat, direction, seatIndex)
+        if (!neighborId) {
+          return
+        }
+
+        const candidateSeat = seatIndex.seatById.get(neighborId)
+        if (!candidateSeat) {
+          return
+        }
+
+        if (isSeatSelectable(candidateSeat.status)) {
+          const targetNode = seatRefs.current.get(neighborId)
+          targetNode?.focus()
+          setFocusedSeatId(neighborId)
+          return
+        }
+
+        currentSeat = candidateSeat
+      }
     },
     [seatIndex],
   )
@@ -291,6 +319,11 @@ function App() {
               role="img"
               aria-label={`${venue.name} seating map`}
             >
+              <defs>
+                <pattern id="seat-unavailable-zigzag" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <path d="M0 6 L2 2 L4 6 L6 2 L8 6" fill="none" stroke="rgba(255, 255, 255, 0.8)" strokeWidth="1.2" />
+                </pattern>
+              </defs>
               <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
                 {seatIndex.allSeats.map((seat) => (
                   <SeatCircle
