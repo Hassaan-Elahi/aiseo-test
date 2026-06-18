@@ -1,0 +1,7 @@
+# Metropolis Arena Seating Map
+
+This project is a Vite + React + TypeScript (strict mode) implementation of an interactive venue seating map. The app loads venue geometry from `public/venue.json`, normalizes it into an indexed seat model, and renders seats in SVG with section transforms applied. I used SVG instead of Canvas because it gives native focusability, keyboard interaction, and straightforward accessibility semantics for individual seats; the trade-off is potential DOM pressure at very large scales, so rendering is structured around immutable seat data, memoized seat components, and isolated state updates to keep interactions smooth.
+
+Selection state supports up to 8 available seats, shows a live subtotal from `priceTier`, and persists seat ids to `localStorage` across reloads. The map supports wheel zoom, drag pan, responsive viewport scaling for arbitrary `map.width/map.height` values, and keyboard seat navigation (arrow keys with Enter/Space selection). I kept the first version focused on required scope and deferred pinch-zoom and websocket updates to avoid risking core correctness and accessibility inside the timebox.
+
+Run locally with `pnpm install` and `pnpm dev`. Build and quality checks are available through `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. Current TODOs: add viewport culling/hybrid rendering if profiling shows bottlenecks at 15k+ seats on weaker hardware, and add end-to-end tests for full keyboard+pointer map flows.
