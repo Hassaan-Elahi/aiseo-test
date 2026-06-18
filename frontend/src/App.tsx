@@ -524,7 +524,6 @@ function App() {
                     seat={seat}
                     isSelected={selectedSeatSet.has(seat.id)}
                     isFocused={focusedSeatId === seat.id}
-                    zoom={zoom}
                     showHeatmap={showHeatmap}
                     onActivate={toggleSeat}
                     onFocusSeat={focusSeat}
@@ -546,6 +545,12 @@ function App() {
                 <li><span className="legend-dot legend-dot--tier-2" /> Tier 2</li>
                 <li><span className="legend-dot legend-dot--tier-3" /> Tier 3</li>
                 <li><span className="legend-dot legend-dot--tier-4" /> Tier 4</li>
+              </ul>
+              <h3 className="legend-subtitle">Disabled Seat Key</h3>
+              <ul className="disabled-legend">
+                <li><span className="legend-dot legend-dot--reserved legend-dot--pattern" /> Reserved</li>
+                <li><span className="legend-dot legend-dot--held legend-dot--pattern" /> Held</li>
+                <li><span className="legend-dot legend-dot--sold legend-dot--pattern" /> Sold</li>
               </ul>
             </section>
           ) : null}

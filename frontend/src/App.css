@@ -366,6 +366,26 @@
   gap: 8px;
 }
 
+.legend-subtitle {
+  margin: 12px 0 8px;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.disabled-legend {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.disabled-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .legend-dot {
   width: 12px;
   height: 12px;
@@ -388,6 +408,26 @@
 
 .legend-dot--tier-4 {
   background: var(--tier-4);
+}
+
+.legend-dot--reserved {
+  background: var(--seat-reserved);
+}
+
+.legend-dot--held {
+  background: var(--seat-held);
+}
+
+.legend-dot--sold {
+  background: var(--seat-sold);
+}
+
+.legend-dot--pattern {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.92) 0 1px,
+    transparent 1px 4px
+  );
 }
 
 .limit-note {

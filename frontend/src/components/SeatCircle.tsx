@@ -8,7 +8,6 @@ interface SeatCircleProps {
   seat: RenderSeat
   isSelected: boolean
   isFocused: boolean
-  zoom: number
   showHeatmap: boolean
   onActivate: (seatId: string) => void
   onFocusSeat: (seatId: string) => void
@@ -20,7 +19,6 @@ function SeatCircleComponent({
   seat,
   isSelected,
   isFocused,
-  zoom,
   showHeatmap,
   onActivate,
   onFocusSeat,
@@ -29,7 +27,7 @@ function SeatCircleComponent({
 }: SeatCircleProps) {
   const disabled = seat.status !== 'available'
   const showFocusRing = isFocused && !disabled
-  const showPatternOverlay = disabled && zoom >= 1.15
+  const showPatternOverlay = disabled
   const heatmapClass = showHeatmap && !disabled ? ` seat--tier-${seat.priceTier}` : ''
   const price = formatCurrency(getSeatPrice(seat.priceTier))
   const seatName = `${seat.sectionId}-${seat.rowIndex}-${String(seat.col).padStart(2, '0')}`
