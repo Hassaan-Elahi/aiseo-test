@@ -14,8 +14,8 @@ import {
 } from './hooks'
 import './App.css'
 
-// const VENUE_DATA_SOURCE = '/venue.stadium.json'
-const VENUE_DATA_SOURCE = '/venue.test.json'
+const VENUE_DATA_SOURCE = '/venue.stadium.json'
+// const VENUE_DATA_SOURCE = '/venue.test.json'
 
 
 function App() {
