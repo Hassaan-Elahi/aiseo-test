@@ -167,3 +167,5 @@ Suggested manual checks (Postman/curl):
 ## Notes
 
 This implementation intentionally uses NestJS over plain Express for stronger modular design, clean dependency boundaries, and easier long-term scaling.
+
+
